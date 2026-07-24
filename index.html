@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tránsito Ilo - Padrón Nominal</title>
+<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+<style>
+  :root {
+    --primary: #1b6e4c;
+    --primary-dark: #14523a;
+    --accent: #2f8f6b;
+    --bg: #f4f7f6;
+    --card: #ffffff;
+    --border: #dde5e2;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --danger: #c0392b;
+    --warning: #b8860b;
+    --ok: #1b6e4c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  header {
+    background: var(--primary);
+    color: white;
+    padding: 16px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  header h1 {
+    font-size: 18px;
+    margin: 0;
+    font-weight: 600;
+  }
+  header .sub {
+    font-size: 12px;
+    opacity: 0.85;
+    margin-top: 2px;
+  }
+  .btn {
+    border: none;
+    padding: 9px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .btn-primary { background: white; color: var(--primary); }
+  .btn-primary:hover { background: #eef4f1; }
+  .btn-outline { background: transparent; color: white; border: 1px solid rgba(255,255,255,0.6); }
+  .btn-outline:hover { background: rgba(255,255,255,0.15); }
+  .container { max-width: 1100px; margin: 0 auto; padding: 20px 16px 60px; }
+  .login-screen { text-align: center; padding: 80px 20px; }
+  .login-screen h2 { color: var(--primary-dark); }
+  .login-screen p { color: var(--muted); max-width: 420px; margin: 8px auto 24px; }
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid var(--border);
+  }
+  .tab {
+    padding: 10px 18px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--muted);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+  }
+  .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: var(--text); }
+  input[type=text], input[type=date], select, textarea {
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    margin-bottom: 14px;
+    font-family: inherit;
+  }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+  @media (max-width: 640px) { .grid2 { grid-template-columns: 1fr; } }
+  .file-drop {
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    margin-bottom: 14px;
+    background: #fafcfb;
+  }
+  .file-drop.drag { border-color: var(--accent); background: #eef7f3; }
+  .file-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .file-chip {
+    font-size: 12px;
+    background: #eef7f3;
+    border: 1px solid var(--accent);
+    color: var(--primary-dark);
+    padding: 4px 8px;
+    border-radius: 5px;
+  }
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: 14px; margin-bottom: 20px; }
+  .stat-box { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; text-align: center; }
+  .stat-box .num { font-size: 26px; font-weight: 700; color: var(--primary); }
+  .stat-box .label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); }
+  th { background: #f0f4f2; font-weight: 600; color: var(--primary-dark); }
+  tr.clickable:hover { background: #f7faf9; cursor: pointer; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+  .badge-pendiente { background: #fdf3d8; color: var(--warning); }
+  .badge-aceptado { background: #e2f3e8; color: var(--ok); }
+  .badge-rechazado { background: #fbe4e1; color: var(--danger); }
+  .badge-reenvio { background: #e6eefc; color: #2952a3; margin-left: 6px; }
+  .detail-box { display: none; margin-top: 10px; padding: 14px; background: #fafcfb; border: 1px solid var(--border); border-radius: 8px; }
+  .thumbs { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+  .thumbs img { width: 130px; height: 130px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); }
+  .msg { padding: 10px 14px; border-radius: 6px; font-size: 13px; margin-bottom: 14px; }
+  .msg-ok { background: #e2f3e8; color: var(--ok); }
+  .msg-err { background: #fbe4e1; color: var(--danger); }
+  .msg-info { background: #e6eefc; color: #2952a3; }
+  .spinner {
+    display: inline-block; width: 14px; height: 14px; border: 2px solid #ccc;
+    border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .search-bar { display: flex; gap: 8px; margin-bottom: 16px; }
+  .search-bar input { margin-bottom: 0; }
+  .empty { text-align: center; color: var(--muted); padding: 30px; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Tránsito Ilo — Padrón Nominal</h1>
+    <div class="sub" id="userInfo">No conectado</div>
+  </div>
+  <div>
+    <button class="btn btn-primary" id="loginBtn" onclick="login()">Iniciar sesión</button>
+    <button class="btn btn-outline" id="logoutBtn" onclick="logout()" style="display:none">Cerrar sesión</button>
+  </div>
+</header>
+
+<div class="container">
+
+  <div id="loginScreen" class="login-screen">
+    <h2>Gestión de niños en tránsito</h2>
+    <p>Inicia sesión con tu cuenta Microsoft 365 para subir capturas y ver el resumen de tránsitos guardados en tu OneDrive.</p>
+    <button class="btn btn-primary" style="background:var(--primary); color:white;" onclick="login()">Iniciar sesión con Microsoft</button>
+  </div>
+
+  <div id="appScreen" style="display:none">
+
+    <div class="tabs">
+      <div class="tab active" data-tab="nuevo" onclick="switchTab('nuevo')">Nuevo Envío</div>
+      <div class="tab" data-tab="resumen" onclick="switchTab('resumen')">Resumen</div>
+      <div class="tab" data-tab="detalle" onclick="switchTab('detalle')">Detalle</div>
+    </div>
+
+    <!-- PANEL: NUEVO ENVIO -->
+    <div class="panel active" id="panel-nuevo">
+      <div class="card">
+        <div id="nuevoMsg"></div>
+        <div class="grid2">
+          <div>
+            <label>DNI del niño/a</label>
+            <input type="text" id="f_dni" placeholder="Ej. 12345678">
+          </div>
+          <div>
+            <label>Nombre completo</label>
+            <input type="text" id="f_nombre" placeholder="Nombres y apellidos">
+          </div>
+        </div>
+        <div class="grid2">
+          <div>
+            <label>N° de solicitud</label>
+            <input type="text" id="f_solicitud" placeholder="Ej. 236705">
+          </div>
+          <div>
+            <label>Fecha de envío</label>
+            <input type="date" id="f_fecha">
+          </div>
+        </div>
+        <div class="grid2">
+          <div>
+            <label>Destino (departamento / provincia / distrito)</label>
+            <input type="text" id="f_destino" placeholder="Ej. Moquegua / Mariscal Nieto / Moquegua">
+          </div>
+          <div>
+            <label>Estado</label>
+            <select id="f_estado">
+              <option value="PENDIENTE">PENDIENTE</option>
+              <option value="ACEPTADO">ACEPTADO</option>
+              <option value="RECHAZADO">RECHAZADO</option>
+            </select>
+          </div>
+        </div>
+        <label>Fundamento</label>
+        <textarea id="f_fundamento" rows="2" placeholder="Ej. Empadronado SISFOH por ULE..."></textarea>
+
+        <label>Capturas de pantalla (puedes seleccionar varias)</label>
+        <div class="file-drop" id="dropZone" onclick="document.getElementById('fileInput').click()">
+          📎 Haz clic aquí o arrastra las imágenes (antes/después del envío)
+          <input type="file" id="fileInput" accept="image/*" multiple style="display:none" onchange="onFilesSelected(this.files)">
+        </div>
+        <div class="file-list" id="fileList"></div>
+
+        <button class="btn btn-primary" style="background:var(--primary); color:white;" onclick="guardarTransito()" id="saveBtn">Guardar tránsito y subir capturas</button>
+      </div>
+    </div>
+
+    <!-- PANEL: RESUMEN -->
+    <div class="panel" id="panel-resumen">
+      <div id="resumenContent">
+        <div class="empty"><span class="spinner"></span> Cargando resumen...</div>
+      </div>
+    </div>
+
+    <!-- PANEL: DETALLE -->
+    <div class="panel" id="panel-detalle">
+      <div class="search-bar">
+        <input type="text" id="searchBox" placeholder="Buscar por DNI, nombre o N° de solicitud..." oninput="renderDetalle()">
+      </div>
+      <div class="card" style="padding:0; overflow-x:auto;">
+        <table id="detalleTable">
+          <thead>
+            <tr><th>DNI</th><th>Nombre</th><th>N° Solicitud</th><th>Fecha</th><th>Destino</th><th>Estado</th><th>Fotos</th></tr>
+          </thead>
+          <tbody id="detalleBody"></tbody>
+        </table>
+        <div class="empty" id="detalleEmpty" style="display:none">No hay registros que coincidan.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ================== CONFIGURACIÓN ================== */
+const msalConfig = {
+  auth: {
+    clientId: "962a40fd-acc8-450f-b5c8-7a294610d1fb",
+    authority: "https://login.microsoftonline.com/pba01.onmicrosoft.com",
+    redirectUri: "https://claudiozzh.github.io/transito-ilo/"
+  },
+  cache: { cacheLocation: "localStorage" }
+};
+const graphScopes = ["User.Read", "Files.ReadWrite"];
+const INDEX_PATH = "Capturas_Transito/indice_transitos.json";
+
+const msalInstance = new msal.PublicClientApplication(msalConfig);
+let account = null;
+let indexData = []; // arreglo de registros
+
+/* ================== LOGIN / LOGOUT ================== */
+async function login() {
+  try {
+    const res = await msalInstance.loginPopup({ scopes: graphScopes });
+    account = res.account;
+    onSignedIn();
+  } catch (e) {
+    alert("Error al iniciar sesión: " + e.message);
+    console.error(e);
+  }
+}
+
+function logout() {
+  msalInstance.logoutPopup();
+}
+
+async function getToken() {
+  const accounts = msalInstance.getAllAccounts();
+  if (accounts.length === 0) throw new Error("No hay sesión activa");
+  account = accounts[0];
+  try {
+    const res = await msalInstance.acquireTokenSilent({ scopes: graphScopes, account });
+    return res.accessToken;
+  } catch (e) {
+    const res = await msalInstance.acquireTokenPopup({ scopes: graphScopes });
+    return res.accessToken;
+  }
+}
+
+async function onSignedIn() {
+  document.getElementById("loginScreen").style.display = "none";
+  document.getElementById("appScreen").style.display = "block";
+  document.getElementById("loginBtn").style.display = "none";
+  document.getElementById("logoutBtn").style.display = "inline-block";
+  document.getElementById("userInfo").innerText = "Conectado como: " + (account ? account.username : "");
+  await cargarIndice();
+  renderResumen();
+  renderDetalle();
+}
+
+window.addEventListener("load", async () => {
+  await msalInstance.handleRedirectPromise();
+  const accounts = msalInstance.getAllAccounts();
+  if (accounts.length > 0) {
+    account = accounts[0];
+    onSignedIn();
+  }
+});
+
+/* ================== GRAPH HELPERS ================== */
+async function graphGet(path) {
+  const token = await getToken();
+  const res = await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/${encodeURIPath(path)}:/content`, {
+    headers: { Authorization: "Bearer " + token }
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error("Error leyendo " + path + ": " + res.status);
+  return await res.json();
+}
+
+async function graphPutJson(path, obj) {
+  const token = await getToken();
+  const res = await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/${encodeURIPath(path)}:/content`, {
+    method: "PUT",
+    headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+    body: JSON.stringify(obj, null, 2)
+  });
+  if (!res.ok) throw new Error("Error guardando " + path + ": " + res.status);
+  return await res.json();
+}
+
+async function graphPutFile(path, file) {
+  const token = await getToken();
+  if (file.size > 4 * 1024 * 1024) {
+    throw new Error(`El archivo ${file.name} pesa más de 4MB. Comprime la imagen o avísale a Claude para agregar subida por sesión.`);
+  }
+  const res = await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/${encodeURIPath(path)}:/content`, {
+    method: "PUT",
+    headers: { Authorization: "Bearer " + token, "Content-Type": file.type || "application/octet-stream" },
+    body: file
+  });
+  if (!res.ok) throw new Error("Error subiendo " + file.name + ": " + res.status);
+  return await res.json();
+}
+
+async function graphListChildren(path) {
+  const token = await getToken();
+  const res = await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/${encodeURIPath(path)}:/children`, {
+    headers: { Authorization: "Bearer " + token }
+  });
+  if (!res.ok) return [];
+  const data = await res.json();
+  return data.value || [];
+}
+
+function encodeURIPath(path) {
+  return path.split("/").map(encodeURIComponent).join("/");
+}
+
+/* ================== ÍNDICE ================== */
+async function cargarIndice() {
+  try {
+    const data = await graphGet(INDEX_PATH);
+    indexData = data || [];
+  } catch (e) {
+    console.error(e);
+    indexData = [];
+  }
+}
+
+/* ================== NUEVO ENVÍO ================== */
+let selectedFiles = [];
+
+function onFilesSelected(files) {
+  selectedFiles = Array.from(files);
+  const list = document.getElementById("fileList");
+  list.innerHTML = "";
+  selectedFiles.forEach(f => {
+    const chip = document.createElement("span");
+    chip.className = "file-chip";
+    chip.innerText = f.name + " (" + Math.round(f.size/1024) + " KB)";
+    list.appendChild(chip);
+  });
+}
+
+const dropZone = document.getElementById("dropZone");
+dropZone.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("drag"); });
+dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag"));
+dropZone.addEventListener("drop", e => {
+  e.preventDefault();
+  dropZone.classList.remove("drag");
+  onFilesSelected(e.dataTransfer.files);
+});
+
+function mesNombre(m) {
+  const nombres = ["01_Enero","02_Febrero","03_Marzo","04_Abril","05_Mayo","06_Junio","07_Julio","08_Agosto","09_Septiembre","10_Octubre","11_Noviembre","12_Diciembre"];
+  return nombres[m];
+}
+
+async function guardarTransito() {
+  const dni = document.getElementById("f_dni").value.trim();
+  const nombre = document.getElementById("f_nombre").value.trim();
+  const solicitud = document.getElementById("f_solicitud").value.trim();
+  const fecha = document.getElementById("f_fecha").value;
+  const destino = document.getElementById("f_destino").value.trim();
+  const estado = document.getElementById("f_estado").value;
+  const fundamento = document.getElementById("f_fundamento").value.trim();
+  const msgBox = document.getElementById("nuevoMsg");
+
+  if (!dni || !solicitud || !fecha) {
+    msgBox.innerHTML = `<div class="msg msg-err">Completa al menos DNI, N° de solicitud y fecha de envío.</div>`;
+    return;
+  }
+  if (selectedFiles.length === 0) {
+    msgBox.innerHTML = `<div class="msg msg-err">Selecciona al menos una captura de pantalla.</div>`;
+    return;
+  }
+
+  const saveBtn = document.getElementById("saveBtn");
+  saveBtn.disabled = true;
+  msgBox.innerHTML = `<div class="msg msg-info"><span class="spinner"></span> Subiendo capturas y guardando registro...</div>`;
+
+  try {
+    const fechaObj = new Date(fecha + "T00:00:00");
+    const year = fechaObj.getFullYear();
+    const month = fechaObj.getMonth();
+    const folder = `Capturas_Transito/${year}/${mesNombre(month)}/${solicitud}_${dni}`;
+
+    const fotosSubidas = [];
+    for (let i = 0; i < selectedFiles.length; i++) {
+      const file = selectedFiles[i];
+      const ext = file.name.split(".").pop();
+      const fileName = `foto${i+1}.${ext}`;
+      await graphPutFile(`${folder}/${fileName}`, file);
+      fotosSubidas.push(fileName);
+    }
+
+    await cargarIndice(); // refrescar por si hay cambios de otra sesión
+    const enviosPrevios = indexData.filter(r => r.dni === dni).length;
+
+    const registro = {
+      id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+      dni, nombre, solicitud, fecha, destino, estado, fundamento,
+      folderPath: folder,
+      fotos: fotosSubidas,
+      numEnvio: enviosPrevios + 1,
+      creadoEn: new Date().toISOString()
+    };
+    indexData.push(registro);
+    await graphPutJson(INDEX_PATH, indexData);
+
+    msgBox.innerHTML = `<div class="msg msg-ok">✅ Tránsito guardado correctamente${enviosPrevios > 0 ? ` (este DNI ya había sido enviado ${enviosPrevios} vez/veces antes — es el envío N°${enviosPrevios+1})` : ""}.</div>`;
+
+    // limpiar formulario
+    ["f_dni","f_nombre","f_solicitud","f_destino","f_fundamento"].forEach(id => document.getElementById(id).value = "");
+    document.getElementById("f_fecha").value = "";
+    document.getElementById("f_estado").value = "PENDIENTE";
+    selectedFiles = [];
+    document.getElementById("fileList").innerHTML = "";
+    document.getElementById("fileInput").value = "";
+
+    renderResumen();
+    renderDetalle();
+  } catch (e) {
+    console.error(e);
+    msgBox.innerHTML = `<div class="msg msg-err">❌ Ocurrió un error: ${e.message}</div>`;
+  } finally {
+    saveBtn.disabled = false;
+  }
+}
+
+/* ================== RESUMEN ================== */
+function renderResumen() {
+  const cont = document.getElementById("resumenContent");
+  if (indexData.length === 0) {
+    cont.innerHTML = `<div class="empty">Todavía no hay tránsitos registrados.</div>`;
+    return;
+  }
+  const total = indexData.length;
+  const porEstado = { PENDIENTE: 0, ACEPTADO: 0, RECHAZADO: 0 };
+  indexData.forEach(r => { if (porEstado[r.estado] !== undefined) porEstado[r.estado]++; });
+
+  const dniCount = {};
+  indexData.forEach(r => { dniCount[r.dni] = (dniCount[r.dni]||0) + 1; });
+  const reenvios = Object.values(dniCount).filter(c => c > 1).length;
+
+  const porMes = {};
+  indexData.forEach(r => {
+    const key = (r.fecha || "").slice(0,7) || "sin fecha";
+    porMes[key] = (porMes[key]||0) + 1;
+  });
+  const mesesOrdenados = Object.keys(porMes).sort().reverse();
+
+  let html = `<div class="stat-grid">
+    <div class="stat-box"><div class="num">${total}</div><div class="label">Total tránsitos</div></div>
+    <div class="stat-box"><div class="num">${porEstado.PENDIENTE}</div><div class="label">Pendientes</div></div>
+    <div class="stat-box"><div class="num">${porEstado.ACEPTADO}</div><div class="label">Aceptados</div></div>
+    <div class="stat-box"><div class="num">${porEstado.RECHAZADO}</div><div class="label">Rechazados</div></div>
+    <div class="stat-box"><div class="num">${reenvios}</div><div class="label">Niños con reenvío</div></div>
+  </div>
+  <div class="card">
+    <strong>Tránsitos por mes</strong>
+    <table style="margin-top:10px">
+      <thead><tr><th>Mes</th><th>Cantidad</th></tr></thead>
+      <tbody>${mesesOrdenados.map(m => `<tr><td>${m}</td><td>${porMes[m]}</td></tr>`).join("")}</tbody>
+    </table>
+  </div>`;
+  cont.innerHTML = html;
+}
+
+/* ================== DETALLE ================== */
+function renderDetalle() {
+  const search = (document.getElementById("searchBox").value || "").toLowerCase();
+  const body = document.getElementById("detalleBody");
+  const emptyMsg = document.getElementById("detalleEmpty");
+  body.innerHTML = "";
+
+  const filtrados = indexData.filter(r => {
+    if (!search) return true;
+    return (r.dni||"").toLowerCase().includes(search)
+      || (r.nombre||"").toLowerCase().includes(search)
+      || (r.solicitud||"").toLowerCase().includes(search);
+  }).sort((a,b) => (b.fecha||"").localeCompare(a.fecha||""));
+
+  if (filtrados.length === 0) {
+    emptyMsg.style.display = "block";
+    return;
+  }
+  emptyMsg.style.display = "none";
+
+  filtrados.forEach((r, idx) => {
+    const badgeClass = r.estado === "ACEPTADO" ? "badge-aceptado" : r.estado === "RECHAZADO" ? "badge-rechazado" : "badge-pendiente";
+    const row = document.createElement("tr");
+    row.className = "clickable";
+    row.innerHTML = `
+      <td>${r.dni}</td>
+      <td>${r.nombre || "-"}</td>
+      <td>${r.solicitud}${r.numEnvio > 1 ? `<span class="badge badge-reenvio">${r.numEnvio}° envío</span>` : ""}</td>
+      <td>${r.fecha || "-"}</td>
+      <td>${r.destino || "-"}</td>
+      <td><span class="badge ${badgeClass}">${r.estado}</span></td>
+      <td>${(r.fotos||[]).length} 📷</td>
+    `;
+    row.onclick = () => toggleDetalle(r, idx);
+    body.appendChild(row);
+
+    const detailRow = document.createElement("tr");
+    detailRow.innerHTML = `<td colspan="7"><div class="detail-box" id="detail-${idx}">
+      <div><strong>Fundamento:</strong> ${r.fundamento || "-"}</div>
+      <div style="margin-top:6px"><strong>Carpeta:</strong> ${r.folderPath}</div>
+      <div class="thumbs" id="thumbs-${idx}"><span class="empty">Cargando fotos...</span></div>
+    </div></td>`;
+    body.appendChild(detailRow);
+  });
+}
+
+async function toggleDetalle(registro, idx) {
+  const box = document.getElementById(`detail-${idx}`);
+  const isOpen = box.style.display === "block";
+  document.querySelectorAll(".detail-box").forEach(b => b.style.display = "none");
+  if (isOpen) return;
+  box.style.display = "block";
+
+  const thumbsDiv = document.getElementById(`thumbs-${idx}`);
+  try {
+    const children = await graphListChildren(registro.folderPath);
+    if (children.length === 0) {
+      thumbsDiv.innerHTML = `<span class="empty">No se encontraron fotos en la carpeta.</span>`;
+      return;
+    }
+    thumbsDiv.innerHTML = "";
+    children.forEach(child => {
+      if (child["@microsoft.graph.downloadUrl"]) {
+        const img = document.createElement("img");
+        img.src = child["@microsoft.graph.downloadUrl"];
+        img.title = child.name;
+        thumbsDiv.appendChild(img);
+      }
+    });
+  } catch (e) {
+    thumbsDiv.innerHTML = `<span class="empty">Error cargando fotos: ${e.message}</span>`;
+  }
+}
+
+/* ================== TABS ================== */
+function switchTab(name) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
+  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+  document.getElementById("panel-" + name).classList.add("active");
+  if (name === "resumen") renderResumen();
+  if (name === "detalle") renderDetalle();
+}
+</script>
+</body>
+</html>
