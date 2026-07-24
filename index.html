@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tránsito Ilo - Padrón Nominal</title>
-<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+<script src="https://alcdn.msauth.net/browser/2.35.0/js/msal-browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root {
     --primary: #1b6e4c;
@@ -20,104 +21,39 @@
     --ok: #1b6e4c;
   }
   * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-  }
-  header {
-    background: var(--primary);
-    color: white;
-    padding: 16px 24px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 12px;
-  }
-  header h1 {
-    font-size: 18px;
-    margin: 0;
-    font-weight: 600;
-  }
-  header .sub {
-    font-size: 12px;
-    opacity: 0.85;
-    margin-top: 2px;
-  }
-  .btn {
-    border: none;
-    padding: 9px 16px;
-    border-radius: 6px;
-    font-size: 14px;
-    cursor: pointer;
-    font-weight: 600;
-  }
+  body { margin: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); }
+  header { background: var(--primary); color: white; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+  header h1 { font-size: 18px; margin: 0; font-weight: 600; }
+  header .sub { font-size: 12px; opacity: 0.85; margin-top: 2px; }
+  .btn { border: none; padding: 9px 16px; border-radius: 6px; font-size: 14px; cursor: pointer; font-weight: 600; }
   .btn-primary { background: white; color: var(--primary); }
   .btn-primary:hover { background: #eef4f1; }
   .btn-outline { background: transparent; color: white; border: 1px solid rgba(255,255,255,0.6); }
   .btn-outline:hover { background: rgba(255,255,255,0.15); }
-  .container { max-width: 1100px; margin: 0 auto; padding: 20px 16px 60px; }
+  .container { max-width: 1150px; margin: 0 auto; padding: 20px 16px 60px; }
   .login-screen { text-align: center; padding: 80px 20px; }
   .login-screen h2 { color: var(--primary-dark); }
   .login-screen p { color: var(--muted); max-width: 420px; margin: 8px auto 24px; }
-  .tabs {
-    display: flex;
-    gap: 4px;
-    margin-bottom: 20px;
-    border-bottom: 2px solid var(--border);
-  }
-  .tab {
-    padding: 10px 18px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--muted);
-    border-bottom: 2px solid transparent;
-    margin-bottom: -2px;
-  }
+  .tabs { display: flex; gap: 4px; margin-bottom: 14px; border-bottom: 2px solid var(--border); }
+  .tab { padding: 10px 18px; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -2px; }
   .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
   .panel { display: none; }
   .panel.active { display: block; }
-  .card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 20px;
-    margin-bottom: 16px;
-  }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+  .section-title { font-size: 13px; font-weight: 700; color: var(--primary-dark); text-transform: uppercase; letter-spacing: 0.03em; margin: 18px 0 8px; padding-top: 10px; border-top: 1px solid var(--border); }
+  .section-title:first-child { margin-top: 0; padding-top: 0; border-top: none; }
   label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: var(--text); }
   input[type=text], input[type=date], select, textarea {
-    width: 100%;
-    padding: 9px 10px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    font-size: 14px;
-    margin-bottom: 14px;
-    font-family: inherit;
+    width: 100%; padding: 9px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; margin-bottom: 14px; font-family: inherit; background: white;
   }
+  input[readonly] { background: #f0f4f2; color: var(--primary-dark); font-weight: 600; }
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
-  @media (max-width: 640px) { .grid2 { grid-template-columns: 1fr; } }
-  .file-drop {
-    border: 2px dashed var(--border);
-    border-radius: 8px;
-    padding: 24px;
-    text-align: center;
-    cursor: pointer;
-    margin-bottom: 14px;
-    background: #fafcfb;
-  }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0 16px; }
+  @media (max-width: 720px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
+  .file-drop { border: 2px dashed var(--border); border-radius: 8px; padding: 24px; text-align: center; cursor: pointer; margin-bottom: 14px; background: #fafcfb; }
   .file-drop.drag { border-color: var(--accent); background: #eef7f3; }
   .file-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
-  .file-chip {
-    font-size: 12px;
-    background: #eef7f3;
-    border: 1px solid var(--accent);
-    color: var(--primary-dark);
-    padding: 4px 8px;
-    border-radius: 5px;
-  }
+  .file-chip { font-size: 12px; background: #eef7f3; border: 1px solid var(--accent); color: var(--primary-dark); padding: 4px 8px; border-radius: 5px; }
   .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: 14px; margin-bottom: 20px; }
   .stat-box { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; text-align: center; }
   .stat-box .num { font-size: 26px; font-weight: 700; color: var(--primary); }
@@ -131,21 +67,21 @@
   .badge-aceptado { background: #e2f3e8; color: var(--ok); }
   .badge-rechazado { background: #fbe4e1; color: var(--danger); }
   .badge-reenvio { background: #e6eefc; color: #2952a3; margin-left: 6px; }
-  .detail-box { display: none; margin-top: 10px; padding: 14px; background: #fafcfb; border: 1px solid var(--border); border-radius: 8px; }
+  .detail-box { display: none; margin-top: 10px; padding: 14px; background: #fafcfb; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; }
+  .detail-box .drow { margin-bottom: 4px; }
+  .detail-box .drow strong { color: var(--primary-dark); }
   .thumbs { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
   .thumbs img { width: 130px; height: 130px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); }
   .msg { padding: 10px 14px; border-radius: 6px; font-size: 13px; margin-bottom: 14px; }
   .msg-ok { background: #e2f3e8; color: var(--ok); }
   .msg-err { background: #fbe4e1; color: var(--danger); }
   .msg-info { background: #e6eefc; color: #2952a3; }
-  .spinner {
-    display: inline-block; width: 14px; height: 14px; border: 2px solid #ccc;
-    border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 6px;
-  }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #ccc; border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 6px; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .search-bar { display: flex; gap: 8px; margin-bottom: 16px; }
   .search-bar input { margin-bottom: 0; }
   .empty { text-align: center; color: var(--muted); padding: 30px; font-size: 13px; }
+  .toolbar { text-align: right; margin-bottom: 10px; }
 </style>
 </head>
 <body>
@@ -176,48 +112,92 @@
       <div class="tab" data-tab="resumen" onclick="switchTab('resumen')">Resumen</div>
       <div class="tab" data-tab="detalle" onclick="switchTab('detalle')">Detalle</div>
     </div>
+    <div class="toolbar">
+      <button class="btn btn-outline" style="color:var(--primary); border-color:var(--primary);" onclick="descargarExcel()">⬇ Descargar Excel (todos los tránsitos)</button>
+    </div>
 
     <!-- PANEL: NUEVO ENVIO -->
     <div class="panel active" id="panel-nuevo">
       <div class="card">
         <div id="nuevoMsg"></div>
-        <div class="grid2">
-          <div>
-            <label>DNI del niño/a</label>
-            <input type="text" id="f_dni" placeholder="Ej. 12345678">
-          </div>
-          <div>
-            <label>Nombre completo</label>
-            <input type="text" id="f_nombre" placeholder="Nombres y apellidos">
-          </div>
+
+        <div class="section-title">Datos del niño/a</div>
+        <div class="grid3">
+          <div><label>DNI</label><input type="text" id="f_dni" placeholder="Ej. 12345678"></div>
+          <div><label>Apellidos</label><input type="text" id="f_apellidos" placeholder="Apellido paterno y materno"></div>
+          <div><label>Nombres</label><input type="text" id="f_nombres" placeholder="Nombres"></div>
         </div>
         <div class="grid2">
-          <div>
-            <label>N° de solicitud</label>
-            <input type="text" id="f_solicitud" placeholder="Ej. 236705">
-          </div>
-          <div>
-            <label>Fecha de envío</label>
-            <input type="date" id="f_fecha">
-          </div>
+          <div><label>Fecha de nacimiento</label><input type="date" id="f_fecnac" onchange="actualizarEdadEnvio()"></div>
+          <div><label>Edad al momento del envío (automática)</label><input type="text" id="f_edadenvio" readonly placeholder="Se calcula sola"></div>
         </div>
-        <div class="grid2">
-          <div>
-            <label>Destino (departamento / provincia / distrito)</label>
-            <input type="text" id="f_destino" placeholder="Ej. Moquegua / Mariscal Nieto / Moquegua">
-          </div>
-          <div>
-            <label>Estado</label>
-            <select id="f_estado">
-              <option value="PENDIENTE">PENDIENTE</option>
-              <option value="ACEPTADO">ACEPTADO</option>
-              <option value="RECHAZADO">RECHAZADO</option>
+
+        <div class="section-title">Datos del envío en Ilo</div>
+        <div class="grid3">
+          <div><label>N° de solicitud de tránsito</label><input type="text" id="f_solicitud" placeholder="Ej. 236705"></div>
+          <div><label>Fecha de envío</label><input type="date" id="f_fecha" onchange="actualizarEdadEnvio()"></div>
+          <div><label>Jurisdicción en Ilo</label>
+            <select id="f_jurisdiccion">
+              <option value="">-- Selecciona --</option>
+              <option>C.S. Pampa Inalámbrica</option>
+              <option>P.S. Los Ángeles</option>
+              <option>P.S. Kennedy</option>
+              <option>P.S. Varadero</option>
+              <option>P.S. 18 de Mayo</option>
+              <option>C.S. Alto Ilo</option>
+              <option>C.S. Miramar</option>
             </select>
           </div>
         </div>
-        <label>Fundamento</label>
+        <label>Dirección en Ilo</label>
+        <input type="text" id="f_direccionilo" placeholder="Dirección del niño/a en Ilo">
+
+        <div class="section-title">Destino del tránsito</div>
+        <div class="grid3">
+          <div><label>Departamento</label><select id="f_departamento" onchange="onDepartamentoChange()"><option value="">Cargando...</option></select></div>
+          <div><label>Provincia</label><select id="f_provincia" onchange="onProvinciaChange()"><option value="">-- Selecciona depto. --</option></select></div>
+          <div><label>Distrito</label><select id="f_distrito" onchange="onDistritoChange()"><option value="">-- Selecciona provincia --</option></select></div>
+        </div>
+        <div class="grid2">
+          <div><label>Ubigeo (automático)</label><input type="text" id="f_ubigeo" readonly placeholder="Se completa solo"></div>
+          <div><label>Centro poblado de destino</label><input type="text" id="f_centropoblado" placeholder="Ej. Cercado"></div>
+        </div>
+        <div class="grid2">
+          <div><label>Dirección de destino</label><input type="text" id="f_direcciondestino" placeholder="Dirección donde llega el niño/a"></div>
+          <div><label>Referencia de la dirección</label><input type="text" id="f_referencia" placeholder="Ej. Frente al mercado..."></div>
+        </div>
+
+        <div class="section-title">Datos adicionales</div>
+        <div class="grid2">
+          <div><label>Tipo de seguro principal del menor</label>
+            <select id="f_seguro">
+              <option value="">-- Selecciona --</option>
+              <option>SIS</option>
+              <option>ESSALUD</option>
+              <option>SANIDAD</option>
+              <option>PRIVADO</option>
+              <option>VARIOS</option>
+            </select>
+          </div>
+          <div><label>Contexto de envío en tránsito</label>
+            <select id="f_contexto">
+              <option value="">-- Selecciona --</option>
+              <option>Homologación</option>
+              <option>Otro</option>
+            </select>
+          </div>
+        </div>
+        <label>Fundamentos de envío</label>
         <textarea id="f_fundamento" rows="2" placeholder="Ej. Empadronado SISFOH por ULE..."></textarea>
 
+        <div class="section-title">Datos de la madre</div>
+        <div class="grid3">
+          <div><label>N° de documento de la madre</label><input type="text" id="f_dnimadre" placeholder="DNI/CE de la madre"></div>
+          <div><label>Nombre de la madre</label><input type="text" id="f_nombremadre" placeholder="Nombres y apellidos"></div>
+          <div><label>Celular de la madre</label><input type="text" id="f_celularmadre" placeholder="9XXXXXXXX"></div>
+        </div>
+
+        <div class="section-title">Evidencias</div>
         <label>Capturas de pantalla (puedes seleccionar varias)</label>
         <div class="file-drop" id="dropZone" onclick="document.getElementById('fileInput').click()">
           📎 Haz clic aquí o arrastra las imágenes (antes/después del envío)
@@ -231,9 +211,7 @@
 
     <!-- PANEL: RESUMEN -->
     <div class="panel" id="panel-resumen">
-      <div id="resumenContent">
-        <div class="empty"><span class="spinner"></span> Cargando resumen...</div>
-      </div>
+      <div id="resumenContent"><div class="empty"><span class="spinner"></span> Cargando resumen...</div></div>
     </div>
 
     <!-- PANEL: DETALLE -->
@@ -244,7 +222,7 @@
       <div class="card" style="padding:0; overflow-x:auto;">
         <table id="detalleTable">
           <thead>
-            <tr><th>DNI</th><th>Nombre</th><th>N° Solicitud</th><th>Fecha</th><th>Destino</th><th>Estado</th><th>Fotos</th></tr>
+            <tr><th>DNI</th><th>Apellidos y Nombres</th><th>N° Solicitud</th><th>Fecha envío</th><th>Destino</th><th>Estado</th><th>Fotos</th></tr>
           </thead>
           <tbody id="detalleBody"></tbody>
         </table>
@@ -268,12 +246,100 @@ const msalConfig = {
 const graphScopes = ["User.Read", "Files.ReadWrite"];
 const INDEX_PATH = "Capturas_Transito/indice_transitos.json";
 
-const msalInstance = new msal.PublicClientApplication(msalConfig);
+let msalInstance = null;
+let msalLoadError = null;
+try {
+  if (typeof msal === "undefined") throw new Error("La libreria MSAL no cargo desde el CDN. Revisa tu conexion o vuelve a intentar en unos segundos.");
+  msalInstance = new msal.PublicClientApplication(msalConfig);
+} catch (e) {
+  msalLoadError = e.message;
+  console.error(e);
+}
 let account = null;
-let indexData = []; // arreglo de registros
+let indexData = [];
+let ubigeos = [];
+
+/* ================== UBIGEOS ================== */
+async function cargarUbigeos() {
+  try {
+    const res = await fetch("./ubigeos.json");
+    ubigeos = await res.json();
+  } catch (e) {
+    console.error("No se pudo cargar ubigeos.json", e);
+    ubigeos = [];
+  }
+  const deptos = [...new Set(ubigeos.map(u => u.departamento))].sort();
+  const sel = document.getElementById("f_departamento");
+  sel.innerHTML = `<option value="">-- Selecciona --</option>` + deptos.map(d => `<option>${d}</option>`).join("");
+}
+
+function onDepartamentoChange() {
+  const depto = document.getElementById("f_departamento").value;
+  const provSel = document.getElementById("f_provincia");
+  const distSel = document.getElementById("f_distrito");
+  distSel.innerHTML = `<option value="">-- Selecciona provincia --</option>`;
+  document.getElementById("f_ubigeo").value = "";
+  if (!depto) { provSel.innerHTML = `<option value="">-- Selecciona depto. --</option>`; return; }
+  const provincias = [...new Set(ubigeos.filter(u => u.departamento === depto).map(u => u.provincia))].sort();
+  provSel.innerHTML = `<option value="">-- Selecciona --</option>` + provincias.map(p => `<option>${p}</option>`).join("");
+}
+
+function onProvinciaChange() {
+  const depto = document.getElementById("f_departamento").value;
+  const prov = document.getElementById("f_provincia").value;
+  const distSel = document.getElementById("f_distrito");
+  document.getElementById("f_ubigeo").value = "";
+  if (!prov) { distSel.innerHTML = `<option value="">-- Selecciona provincia --</option>`; return; }
+  const distritos = ubigeos.filter(u => u.departamento === depto && u.provincia === prov).map(u => u.distrito).sort();
+  distSel.innerHTML = `<option value="">-- Selecciona --</option>` + distritos.map(d => `<option>${d}</option>`).join("");
+}
+
+function onDistritoChange() {
+  const depto = document.getElementById("f_departamento").value;
+  const prov = document.getElementById("f_provincia").value;
+  const dist = document.getElementById("f_distrito").value;
+  const found = ubigeos.find(u => u.departamento === depto && u.provincia === prov && u.distrito === dist);
+  document.getElementById("f_ubigeo").value = found ? found.ubigeo : "";
+}
+
+/* ================== EDAD ================== */
+function calcularEdad(nacimiento, referencia) {
+  let y = referencia.getFullYear() - nacimiento.getFullYear();
+  let m = referencia.getMonth() - nacimiento.getMonth();
+  let d = referencia.getDate() - nacimiento.getDate();
+  if (d < 0) {
+    m--;
+    const prevMonthLastDay = new Date(referencia.getFullYear(), referencia.getMonth(), 0).getDate();
+    d += prevMonthLastDay;
+  }
+  if (m < 0) { y--; m += 12; }
+  if (y < 0) { y = 0; m = 0; d = 0; }
+  return { y, m, d };
+}
+function formatEdad(e) {
+  return `${String(e.y).padStart(2,"0")}a ${String(e.m).padStart(2,"0")}m ${String(e.d).padStart(2,"0")}d`;
+}
+function actualizarEdadEnvio() {
+  const nacStr = document.getElementById("f_fecnac").value;
+  const envStr = document.getElementById("f_fecha").value;
+  const out = document.getElementById("f_edadenvio");
+  if (!nacStr || !envStr) { out.value = ""; return; }
+  const nac = new Date(nacStr + "T00:00:00");
+  const env = new Date(envStr + "T00:00:00");
+  out.value = formatEdad(calcularEdad(nac, env));
+}
+function fechaHoyPeru() {
+  const now = new Date();
+  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+  return new Date(utcMs - 5 * 3600000);
+}
 
 /* ================== LOGIN / LOGOUT ================== */
 async function login() {
+  if (msalLoadError) {
+    alert("No se pudo iniciar el sistema de login: " + msalLoadError + "\n\nRecarga la pagina (Ctrl+F5) e intenta de nuevo.");
+    return;
+  }
   try {
     const res = await msalInstance.loginPopup({ scopes: graphScopes });
     account = res.account;
@@ -283,11 +349,7 @@ async function login() {
     console.error(e);
   }
 }
-
-function logout() {
-  msalInstance.logoutPopup();
-}
-
+function logout() { msalInstance.logoutPopup(); }
 async function getToken() {
   const accounts = msalInstance.getAllAccounts();
   if (accounts.length === 0) throw new Error("No hay sesión activa");
@@ -300,91 +362,66 @@ async function getToken() {
     return res.accessToken;
   }
 }
-
 async function onSignedIn() {
   document.getElementById("loginScreen").style.display = "none";
   document.getElementById("appScreen").style.display = "block";
   document.getElementById("loginBtn").style.display = "none";
   document.getElementById("logoutBtn").style.display = "inline-block";
   document.getElementById("userInfo").innerText = "Conectado como: " + (account ? account.username : "");
+  await cargarUbigeos();
   await cargarIndice();
   renderResumen();
   renderDetalle();
 }
-
 window.addEventListener("load", async () => {
+  if (!msalInstance) return;
   await msalInstance.handleRedirectPromise();
   const accounts = msalInstance.getAllAccounts();
-  if (accounts.length > 0) {
-    account = accounts[0];
-    onSignedIn();
-  }
+  if (accounts.length > 0) { account = accounts[0]; onSignedIn(); }
 });
 
 /* ================== GRAPH HELPERS ================== */
+function encodeURIPath(path) { return path.split("/").map(encodeURIComponent).join("/"); }
 async function graphGet(path) {
   const token = await getToken();
-  const res = await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/${encodeURIPath(path)}:/content`, {
-    headers: { Authorization: "Bearer " + token }
-  });
+  const res = await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/${encodeURIPath(path)}:/content`, { headers: { Authorization: "Bearer " + token } });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error("Error leyendo " + path + ": " + res.status);
   return await res.json();
 }
-
 async function graphPutJson(path, obj) {
   const token = await getToken();
   const res = await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/${encodeURIPath(path)}:/content`, {
-    method: "PUT",
-    headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
-    body: JSON.stringify(obj, null, 2)
+    method: "PUT", headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" }, body: JSON.stringify(obj, null, 2)
   });
   if (!res.ok) throw new Error("Error guardando " + path + ": " + res.status);
   return await res.json();
 }
-
 async function graphPutFile(path, file) {
   const token = await getToken();
-  if (file.size > 4 * 1024 * 1024) {
-    throw new Error(`El archivo ${file.name} pesa más de 4MB. Comprime la imagen o avísale a Claude para agregar subida por sesión.`);
-  }
+  if (file.size > 4 * 1024 * 1024) throw new Error(`El archivo ${file.name} pesa más de 4MB. Comprime la imagen.`);
   const res = await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/${encodeURIPath(path)}:/content`, {
-    method: "PUT",
-    headers: { Authorization: "Bearer " + token, "Content-Type": file.type || "application/octet-stream" },
-    body: file
+    method: "PUT", headers: { Authorization: "Bearer " + token, "Content-Type": file.type || "application/octet-stream" }, body: file
   });
   if (!res.ok) throw new Error("Error subiendo " + file.name + ": " + res.status);
   return await res.json();
 }
-
 async function graphListChildren(path) {
   const token = await getToken();
-  const res = await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/${encodeURIPath(path)}:/children`, {
-    headers: { Authorization: "Bearer " + token }
-  });
+  const res = await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/${encodeURIPath(path)}:/children`, { headers: { Authorization: "Bearer " + token } });
   if (!res.ok) return [];
   const data = await res.json();
   return data.value || [];
 }
 
-function encodeURIPath(path) {
-  return path.split("/").map(encodeURIComponent).join("/");
-}
-
 /* ================== ÍNDICE ================== */
 async function cargarIndice() {
-  try {
-    const data = await graphGet(INDEX_PATH);
-    indexData = data || [];
-  } catch (e) {
-    console.error(e);
-    indexData = [];
-  }
+  try { indexData = (await graphGet(INDEX_PATH)) || []; }
+  catch (e) { console.error(e); indexData = []; }
 }
 
 /* ================== NUEVO ENVÍO ================== */
 let selectedFiles = [];
-
 function onFilesSelected(files) {
   selectedFiles = Array.from(files);
   const list = document.getElementById("fileList");
@@ -396,15 +433,10 @@ function onFilesSelected(files) {
     list.appendChild(chip);
   });
 }
-
 const dropZone = document.getElementById("dropZone");
 dropZone.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("drag"); });
 dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag"));
-dropZone.addEventListener("drop", e => {
-  e.preventDefault();
-  dropZone.classList.remove("drag");
-  onFilesSelected(e.dataTransfer.files);
-});
+dropZone.addEventListener("drop", e => { e.preventDefault(); dropZone.classList.remove("drag"); onFilesSelected(e.dataTransfer.files); });
 
 function mesNombre(m) {
   const nombres = ["01_Enero","02_Febrero","03_Marzo","04_Abril","05_Mayo","06_Junio","07_Julio","08_Agosto","09_Septiembre","10_Octubre","11_Noviembre","12_Diciembre"];
@@ -413,13 +445,29 @@ function mesNombre(m) {
 
 async function guardarTransito() {
   const dni = document.getElementById("f_dni").value.trim();
-  const nombre = document.getElementById("f_nombre").value.trim();
+  const apellidos = document.getElementById("f_apellidos").value.trim();
+  const nombres = document.getElementById("f_nombres").value.trim();
+  const fecnac = document.getElementById("f_fecnac").value;
+  const edadEnvio = document.getElementById("f_edadenvio").value;
   const solicitud = document.getElementById("f_solicitud").value.trim();
   const fecha = document.getElementById("f_fecha").value;
-  const destino = document.getElementById("f_destino").value.trim();
-  const estado = document.getElementById("f_estado").value;
+  const jurisdiccion = document.getElementById("f_jurisdiccion").value;
+  const direccionIlo = document.getElementById("f_direccionilo").value.trim();
+  const departamento = document.getElementById("f_departamento").value;
+  const provincia = document.getElementById("f_provincia").value;
+  const distrito = document.getElementById("f_distrito").value;
+  const ubigeo = document.getElementById("f_ubigeo").value;
+  const centroPoblado = document.getElementById("f_centropoblado").value.trim();
+  const direccionDestino = document.getElementById("f_direcciondestino").value.trim();
+  const referencia = document.getElementById("f_referencia").value.trim();
+  const seguro = document.getElementById("f_seguro").value;
+  const contexto = document.getElementById("f_contexto").value;
   const fundamento = document.getElementById("f_fundamento").value.trim();
+  const dniMadre = document.getElementById("f_dnimadre").value.trim();
+  const nombreMadre = document.getElementById("f_nombremadre").value.trim();
+  const celularMadre = document.getElementById("f_celularmadre").value.trim();
   const msgBox = document.getElementById("nuevoMsg");
+  const estado = "PENDIENTE";
 
   if (!dni || !solicitud || !fecha) {
     msgBox.innerHTML = `<div class="msg msg-err">Completa al menos DNI, N° de solicitud y fecha de envío.</div>`;
@@ -436,9 +484,7 @@ async function guardarTransito() {
 
   try {
     const fechaObj = new Date(fecha + "T00:00:00");
-    const year = fechaObj.getFullYear();
-    const month = fechaObj.getMonth();
-    const folder = `Capturas_Transito/${year}/${mesNombre(month)}/${solicitud}_${dni}`;
+    const folder = `Capturas_Transito/${fechaObj.getFullYear()}/${mesNombre(fechaObj.getMonth())}/${solicitud}_${dni}`;
 
     const fotosSubidas = [];
     for (let i = 0; i < selectedFiles.length; i++) {
@@ -449,26 +495,36 @@ async function guardarTransito() {
       fotosSubidas.push(fileName);
     }
 
-    await cargarIndice(); // refrescar por si hay cambios de otra sesión
+    await cargarIndice();
     const enviosPrevios = indexData.filter(r => r.dni === dni).length;
 
     const registro = {
       id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
-      dni, nombre, solicitud, fecha, destino, estado, fundamento,
-      folderPath: folder,
-      fotos: fotosSubidas,
-      numEnvio: enviosPrevios + 1,
-      creadoEn: new Date().toISOString()
+      dni, apellidos, nombres,
+      nombreCompleto: apellidos && nombres ? `${apellidos}, ${nombres}` : (apellidos || nombres || ""),
+      fechaNacimiento: fecnac, edadAlEnvio: edadEnvio,
+      solicitud, fecha, jurisdiccion, direccionIlo,
+      departamento, provincia, distrito, ubigeo, centroPoblado,
+      direccionDestino, referencia, seguro, contexto, fundamento,
+      dniMadre, nombreMadre, celularMadre,
+      estado, folderPath: folder, fotos: fotosSubidas,
+      numEnvio: enviosPrevios + 1, creadoEn: new Date().toISOString()
     };
     indexData.push(registro);
     await graphPutJson(INDEX_PATH, indexData);
 
     msgBox.innerHTML = `<div class="msg msg-ok">✅ Tránsito guardado correctamente${enviosPrevios > 0 ? ` (este DNI ya había sido enviado ${enviosPrevios} vez/veces antes — es el envío N°${enviosPrevios+1})` : ""}.</div>`;
 
-    // limpiar formulario
-    ["f_dni","f_nombre","f_solicitud","f_destino","f_fundamento"].forEach(id => document.getElementById(id).value = "");
-    document.getElementById("f_fecha").value = "";
-    document.getElementById("f_estado").value = "PENDIENTE";
+    document.querySelectorAll("#panel-nuevo input[type=text], #panel-nuevo textarea").forEach(el => el.value = "");
+    document.querySelectorAll("#panel-nuevo input[type=date]").forEach(el => el.value = "");
+    document.getElementById("f_edadenvio").value = "";
+    document.getElementById("f_ubigeo").value = "";
+    document.getElementById("f_jurisdiccion").value = "";
+    document.getElementById("f_seguro").value = "";
+    document.getElementById("f_contexto").value = "";
+    document.getElementById("f_provincia").innerHTML = `<option value="">-- Selecciona depto. --</option>`;
+    document.getElementById("f_distrito").innerHTML = `<option value="">-- Selecciona provincia --</option>`;
+    document.getElementById("f_departamento").value = "";
     selectedFiles = [];
     document.getElementById("fileList").innerHTML = "";
     document.getElementById("fileInput").value = "";
@@ -486,40 +542,28 @@ async function guardarTransito() {
 /* ================== RESUMEN ================== */
 function renderResumen() {
   const cont = document.getElementById("resumenContent");
-  if (indexData.length === 0) {
-    cont.innerHTML = `<div class="empty">Todavía no hay tránsitos registrados.</div>`;
-    return;
-  }
+  if (indexData.length === 0) { cont.innerHTML = `<div class="empty">Todavía no hay tránsitos registrados.</div>`; return; }
   const total = indexData.length;
   const porEstado = { PENDIENTE: 0, ACEPTADO: 0, RECHAZADO: 0 };
   indexData.forEach(r => { if (porEstado[r.estado] !== undefined) porEstado[r.estado]++; });
-
   const dniCount = {};
   indexData.forEach(r => { dniCount[r.dni] = (dniCount[r.dni]||0) + 1; });
   const reenvios = Object.values(dniCount).filter(c => c > 1).length;
-
   const porMes = {};
-  indexData.forEach(r => {
-    const key = (r.fecha || "").slice(0,7) || "sin fecha";
-    porMes[key] = (porMes[key]||0) + 1;
-  });
+  indexData.forEach(r => { const key = (r.fecha || "").slice(0,7) || "sin fecha"; porMes[key] = (porMes[key]||0) + 1; });
   const mesesOrdenados = Object.keys(porMes).sort().reverse();
 
-  let html = `<div class="stat-grid">
+  cont.innerHTML = `<div class="stat-grid">
     <div class="stat-box"><div class="num">${total}</div><div class="label">Total tránsitos</div></div>
     <div class="stat-box"><div class="num">${porEstado.PENDIENTE}</div><div class="label">Pendientes</div></div>
     <div class="stat-box"><div class="num">${porEstado.ACEPTADO}</div><div class="label">Aceptados</div></div>
     <div class="stat-box"><div class="num">${porEstado.RECHAZADO}</div><div class="label">Rechazados</div></div>
     <div class="stat-box"><div class="num">${reenvios}</div><div class="label">Niños con reenvío</div></div>
   </div>
-  <div class="card">
-    <strong>Tránsitos por mes</strong>
-    <table style="margin-top:10px">
-      <thead><tr><th>Mes</th><th>Cantidad</th></tr></thead>
-      <tbody>${mesesOrdenados.map(m => `<tr><td>${m}</td><td>${porMes[m]}</td></tr>`).join("")}</tbody>
-    </table>
+  <div class="card"><strong>Tránsitos por mes</strong>
+    <table style="margin-top:10px"><thead><tr><th>Mes</th><th>Cantidad</th></tr></thead>
+    <tbody>${mesesOrdenados.map(m => `<tr><td>${m}</td><td>${porMes[m]}</td></tr>`).join("")}</tbody></table>
   </div>`;
-  cont.innerHTML = html;
 }
 
 /* ================== DETALLE ================== */
@@ -528,40 +572,43 @@ function renderDetalle() {
   const body = document.getElementById("detalleBody");
   const emptyMsg = document.getElementById("detalleEmpty");
   body.innerHTML = "";
-
   const filtrados = indexData.filter(r => {
     if (!search) return true;
-    return (r.dni||"").toLowerCase().includes(search)
-      || (r.nombre||"").toLowerCase().includes(search)
-      || (r.solicitud||"").toLowerCase().includes(search);
+    return (r.dni||"").toLowerCase().includes(search) || (r.nombreCompleto||"").toLowerCase().includes(search) || (r.solicitud||"").toLowerCase().includes(search);
   }).sort((a,b) => (b.fecha||"").localeCompare(a.fecha||""));
 
-  if (filtrados.length === 0) {
-    emptyMsg.style.display = "block";
-    return;
-  }
+  if (filtrados.length === 0) { emptyMsg.style.display = "block"; return; }
   emptyMsg.style.display = "none";
 
   filtrados.forEach((r, idx) => {
     const badgeClass = r.estado === "ACEPTADO" ? "badge-aceptado" : r.estado === "RECHAZADO" ? "badge-rechazado" : "badge-pendiente";
+    const destinoTxt = [r.distrito, r.provincia, r.departamento].filter(Boolean).join(" / ");
     const row = document.createElement("tr");
     row.className = "clickable";
     row.innerHTML = `
       <td>${r.dni}</td>
-      <td>${r.nombre || "-"}</td>
+      <td>${r.nombreCompleto || "-"}</td>
       <td>${r.solicitud}${r.numEnvio > 1 ? `<span class="badge badge-reenvio">${r.numEnvio}° envío</span>` : ""}</td>
       <td>${r.fecha || "-"}</td>
-      <td>${r.destino || "-"}</td>
+      <td>${destinoTxt || "-"}</td>
       <td><span class="badge ${badgeClass}">${r.estado}</span></td>
-      <td>${(r.fotos||[]).length} 📷</td>
-    `;
+      <td>${(r.fotos||[]).length} 📷</td>`;
     row.onclick = () => toggleDetalle(r, idx);
     body.appendChild(row);
 
+    const hoyPeru = fechaHoyPeru();
+    const edadActual = r.fechaNacimiento ? formatEdad(calcularEdad(new Date(r.fechaNacimiento + "T00:00:00"), hoyPeru)) : "-";
+
     const detailRow = document.createElement("tr");
     detailRow.innerHTML = `<td colspan="7"><div class="detail-box" id="detail-${idx}">
-      <div><strong>Fundamento:</strong> ${r.fundamento || "-"}</div>
-      <div style="margin-top:6px"><strong>Carpeta:</strong> ${r.folderPath}</div>
+      <div class="drow"><strong>Fecha de nacimiento:</strong> ${r.fechaNacimiento || "-"} &nbsp;|&nbsp; <strong>Edad al envío:</strong> ${r.edadAlEnvio || "-"} &nbsp;|&nbsp; <strong>Edad actual:</strong> ${edadActual}</div>
+      <div class="drow"><strong>Jurisdicción Ilo:</strong> ${r.jurisdiccion || "-"} &nbsp;|&nbsp; <strong>Dirección Ilo:</strong> ${r.direccionIlo || "-"}</div>
+      <div class="drow"><strong>Ubigeo destino:</strong> ${r.ubigeo || "-"} &nbsp;|&nbsp; <strong>Centro poblado:</strong> ${r.centroPoblado || "-"}</div>
+      <div class="drow"><strong>Dirección destino:</strong> ${r.direccionDestino || "-"} &nbsp;|&nbsp; <strong>Referencia:</strong> ${r.referencia || "-"}</div>
+      <div class="drow"><strong>Seguro:</strong> ${r.seguro || "-"} &nbsp;|&nbsp; <strong>Contexto:</strong> ${r.contexto || "-"}</div>
+      <div class="drow"><strong>Fundamento:</strong> ${r.fundamento || "-"}</div>
+      <div class="drow"><strong>Madre:</strong> ${r.nombreMadre || "-"} (DNI ${r.dniMadre || "-"}, cel. ${r.celularMadre || "-"})</div>
+      <div class="drow"><strong>Carpeta OneDrive:</strong> ${r.folderPath}</div>
       <div class="thumbs" id="thumbs-${idx}"><span class="empty">Cargando fotos...</span></div>
     </div></td>`;
     body.appendChild(detailRow);
@@ -574,14 +621,10 @@ async function toggleDetalle(registro, idx) {
   document.querySelectorAll(".detail-box").forEach(b => b.style.display = "none");
   if (isOpen) return;
   box.style.display = "block";
-
   const thumbsDiv = document.getElementById(`thumbs-${idx}`);
   try {
     const children = await graphListChildren(registro.folderPath);
-    if (children.length === 0) {
-      thumbsDiv.innerHTML = `<span class="empty">No se encontraron fotos en la carpeta.</span>`;
-      return;
-    }
+    if (children.length === 0) { thumbsDiv.innerHTML = `<span class="empty">No se encontraron fotos en la carpeta.</span>`; return; }
     thumbsDiv.innerHTML = "";
     children.forEach(child => {
       if (child["@microsoft.graph.downloadUrl"]) {
@@ -594,6 +637,46 @@ async function toggleDetalle(registro, idx) {
   } catch (e) {
     thumbsDiv.innerHTML = `<span class="empty">Error cargando fotos: ${e.message}</span>`;
   }
+}
+
+/* ================== DESCARGA EXCEL ================== */
+function descargarExcel() {
+  if (indexData.length === 0) { alert("Todavía no hay tránsitos registrados para exportar."); return; }
+  const hoyPeru = fechaHoyPeru();
+  const filas = indexData.map(r => ({
+    "DNI": r.dni,
+    "Apellidos y Nombres": r.nombreCompleto || "",
+    "Fecha de nacimiento": r.fechaNacimiento || "",
+    "Edad al momento del envío": r.edadAlEnvio || "",
+    "Edad actual": r.fechaNacimiento ? formatEdad(calcularEdad(new Date(r.fechaNacimiento + "T00:00:00"), hoyPeru)) : "",
+    "N. Solicitud": r.solicitud,
+    "N. de envío": r.numEnvio,
+    "Fecha de envío": r.fecha || "",
+    "Jurisdicción Ilo": r.jurisdiccion || "",
+    "Dirección en Ilo": r.direccionIlo || "",
+    "Departamento destino": r.departamento || "",
+    "Provincia destino": r.provincia || "",
+    "Distrito destino": r.distrito || "",
+    "Centro poblado destino": r.centroPoblado || "",
+    "Ubigeo destino": r.ubigeo || "",
+    "Dirección destino": r.direccionDestino || "",
+    "Referencia dirección": r.referencia || "",
+    "Tipo de seguro": r.seguro || "",
+    "Contexto de envío": r.contexto || "",
+    "Fundamentos": r.fundamento || "",
+    "N. documento madre": r.dniMadre || "",
+    "Nombre de la madre": r.nombreMadre || "",
+    "Celular de la madre": r.celularMadre || "",
+    "Estado": r.estado,
+    "Cantidad de fotos": (r.fotos || []).length,
+    "Carpeta OneDrive": r.folderPath,
+    "Registrado el": r.creadoEn || ""
+  }));
+  const ws = XLSX.utils.json_to_sheet(filas);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Transitos");
+  const fechaArchivo = hoyPeru.toISOString().slice(0,10);
+  XLSX.writeFile(wb, `Transitos_Ilo_${fechaArchivo}.xlsx`);
 }
 
 /* ================== TABS ================== */
