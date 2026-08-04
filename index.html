@@ -288,7 +288,7 @@ const msalConfig = {
   cache: { cacheLocation: "localStorage" }
 };
 const graphScopes = ["User.Read", "Files.ReadWrite"];
-const INDEX_PATH = "Capturas_Transito/indice_transitos.json";
+const INDEX_PATH = "AUTOMATIZACION_PADRON_NOMINAL/04_TRANSITOS/Capturas_Transito/indice_transitos.json";
 const REPORTES_BASE = "01_REPORTES_DIARIOS";
 
 let msalInstance = null;
@@ -547,7 +547,7 @@ async function guardarTransito() {
 
   try {
     const fechaObj = new Date(fecha + "T00:00:00");
-    const folder = `Capturas_Transito/${fechaObj.getFullYear()}/${mesNombre(fechaObj.getMonth())}/${solicitud}_${dni}`;
+    const folder = `AUTOMATIZACION_PADRON_NOMINAL/04_TRANSITOS/Capturas_Transito/${fechaObj.getFullYear()}/${mesNombre(fechaObj.getMonth())}/${solicitud}_${dni}`;
     const fotosSubidas = [];
     for (let i = 0; i < selectedFiles.length; i++) {
       const file = selectedFiles[i];
@@ -742,6 +742,9 @@ function renderDetalle() {
         <button class="btn btn-primary" style="padding:6px 12px;" onclick="cambiarEstado('${r.id}', ${idx})">Guardar cambio de estado</button>
       </div>
       <div style="font-size:12px; color:var(--muted); margin-top:4px;">Una vez guardado, este registro ya no podrá editarse.</div>
+      <div style="margin-top:10px;">
+        <button class="btn btn-ghost" style="color:var(--danger); border-color:var(--danger); padding:5px 10px; font-size:12px;" onclick="eliminarRegistro('${r.id}')">Eliminar este registro</button>
+      </div>
     </div>` : ""}
     ${r.estado === "ACEPTADO" && !r.retornoFecha ? `
     <div style="margin-top:14px; padding-top:12px; border-top:1px dashed var(--border);">
@@ -921,6 +924,31 @@ async function confirmarRetornoDesdeVerificacion(recordId, i, fecha) {
   }
 }
 
+async function eliminarRegistro(recordId) {
+  const rec = indexData.find(r => r.id === recordId);
+  if (!rec) { alert("No se encontró el registro."); return; }
+  if (rec.estado !== "PENDIENTE") { alert("Solo se pueden eliminar registros PENDIENTE."); return; }
+  if (!confirm(`¿Confirmas ELIMINAR el registro de ${rec.nombreCompleto} (N. solicitud ${rec.solicitud})? Esta acción no se puede deshacer.`)) return;
+  if (!confirm("Última confirmación: se borrará el registro y su carpeta de fotos en OneDrive. ¿Continuar?")) return;
+  try {
+    await cargarIndice();
+    indexData = indexData.filter(r => r.id !== recordId);
+    await graphPutJson(INDEX_PATH, indexData);
+    if (rec.folderPath) {
+      try {
+        const token = await getToken();
+        await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/${encodeURIPath(rec.folderPath)}`, {
+          method: "DELETE", headers: { Authorization: "Bearer " + token }
+        });
+      } catch (e) { console.warn("No se pudo borrar la carpeta de fotos:", e); }
+    }
+    alert("Registro eliminado.");
+    renderDetalle(); renderResumen();
+  } catch (e) {
+    alert("Error eliminando el registro: " + e.message);
+  }
+}
+
 /* ================== EXCEL ================== */
 function toggleTodos(checked) {
   document.querySelectorAll(".chk-estado").forEach(c => c.checked = checked);
@@ -937,7 +965,7 @@ function descargarExcel() {
   if (ubigeoFiltro) filtrados = filtrados.filter(r => (r.ubigeo || "").startsWith(ubigeoFiltro));
   if (filtrados.length === 0) { alert("No hay tránsitos que coincidan con esos filtros."); return; }
 
-  const encabezados = ["DNI","Codigo padron nominal","Apellidos y nombres","Fecha de nacimiento","Direccion en Ilo","Jurisdiccion Ilo","Nro. Solicitud","Fecha de envio en transito","Edad al envio","Edad actual","Departamento","Provincia","Distrito","Ubigeo","Centro poblado","Direccion destino","Referencia de direccion","Fundamentos","Nro. documento madre","Nombre de la madre","Celular de la persona a cargo","Nro. documento padre","Nombre del padre","N. de envio","ESTADO","Fecha cambio estado"];
+  const encabezados = ["DNI","Codigo padron nominal","Apellidos y nombres","Fecha de nacimiento","Direccion en Ilo","Jurisdiccion Ilo","Nro. Solicitud","Fecha de envio en transito","Edad al envio","Edad actual","Departamento","Provincia","Distrito","Ubigeo","Centro poblado","Direccion destino","Referencia de direccion","Fundamentos","Nro. documento madre","Nombre de la madre","Celular de la persona a cargo","Nro. documento padre","Nombre del padre","Contexto de envio","N. de envio","ESTADO","Fecha cambio estado"];
   const aFecha = s => {
     if (!s) return "";
     const [y, m, d] = s.split("-").map(Number);
@@ -950,11 +978,11 @@ function descargarExcel() {
     r.fechaNacimiento ? formatEdad(calcularEdad(new Date(r.fechaNacimiento+"T00:00:00"), hoy)) : "",
     r.departamento || "", r.provincia || "", r.distrito || "", r.ubigeo || "", r.centroPoblado || "",
     r.direccionDestino || "", r.referencia || "", r.fundamento || "", r.dniMadre || "", r.nombreMadre || "", r.celularCargo || "",
-    r.dniPadre || "", r.nombrePadre || "", r.numEnvio, r.estado, aFecha(r.fechaCambioEstado)
+    r.dniPadre || "", r.nombrePadre || "", r.contexto || "", r.numEnvio, r.estado, aFecha(r.fechaCambioEstado)
   ]);
 
   const ws = XLSX.utils.aoa_to_sheet([encabezados, ...filas]);
-  const COLS_FECHA = [3, 7, 25];
+  const COLS_FECHA = [3, 7, 26];
   const COL_DIRECCION_DESTINO = 15;
   const COL_REFERENCIA = 16;
   const COL_FUNDAMENTOS = 17;
@@ -965,7 +993,7 @@ function descargarExcel() {
   ws["!cols"] = [
     {wch:12},{wch:16},{wch:38},{wch:16},{wch:32},{wch:22},{wch:12},{wch:16},{wch:14},{wch:14},
     {wch:14},{wch:18},{wch:18},{wch:10},{wch:20},{wch:ANCHO_DIRECCION_DESTINO},{wch:ANCHO_REFERENCIA},
-    {wch:ANCHO_FUNDAMENTOS},{wch:16},{wch:28},{wch:16},{wch:16},{wch:28},{wch:14},{wch:12},{wch:16}
+    {wch:ANCHO_FUNDAMENTOS},{wch:16},{wch:28},{wch:16},{wch:16},{wch:28},{wch:18},{wch:14},{wch:12},{wch:16}
   ];
   ws["!rows"] = [{ hpt: 20 }, ...filas.map(fila => {
     let maxLineasVisuales = 1;
