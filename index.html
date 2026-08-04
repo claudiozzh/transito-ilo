@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Padrón Nominal Ilo — Sistema</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --primary: #1d5fbf; --primary-dark: #163f7a; --bg: #f4f6f9; --card: #ffffff; --border: #dbe2ea; --text: #1f2937; --muted: #6b7280; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif; background: var(--bg); color: var(--text); }
+  header { background: var(--primary); color: white; padding: 18px 24px; }
+  header h1 { font-size: 18px; margin: 0; font-weight: 600; }
+  header .sub { font-size: 12px; opacity: 0.85; margin-top: 2px; }
+  .container { max-width: 720px; margin: 0 auto; padding: 40px 20px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+  a.card { display: block; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 22px; text-decoration: none; color: var(--text); transition: border-color 0.15s; }
+  a.card:hover { border-color: var(--primary); }
+  a.card.deshabilitada { opacity: 0.5; pointer-events: none; }
+  .card h2 { font-size: 15px; margin: 0 0 6px; color: var(--primary-dark); }
+  .card p { font-size: 13px; color: var(--muted); margin: 0; line-height: 1.5; }
+  .etiqueta { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; padding: 2px 8px; border-radius: 10px; margin-top: 10px; }
+  .etiqueta.listo { background: #dcf3e7; color: #157347; }
+  .etiqueta.pendiente { background: #f0f0f0; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Padrón Nominal Ilo — Sistema</h1>
+  <div class="sub">Municipalidad Provincial de Ilo · Subgerencia de Programas Sociales</div>
+</header>
+
+<div class="container">
+  <div class="grid">
+    <a class="card" href="transito.html">
+      <h2>Niños en tránsito</h2>
+      <p>Registrar envíos, ver resumen y detalle, verificar retornos contra el padrón diario.</p>
+      <span class="etiqueta listo">Disponible</span>
+    </a>
+    <a class="card" href="bajas-altas.html">
+      <h2>Bajas y altas</h2>
+      <p>Solicitar baja a DIRESA, registrar altas, y verificar sus estados contra el padrón diario.</p>
+      <span class="etiqueta listo">Disponible</span>
+    </a>
+    <a class="card deshabilitada" href="#">
+      <h2>Recibidos en bandeja</h2>
+      <p>Niños que otros distritos envían a Ilo — aceptar o rechazar.</p>
+      <span class="etiqueta pendiente">Próximamente</span>
+    </a>
+    <a class="card deshabilitada" href="#">
+      <h2>Reubicados</h2>
+      <p>Niños jalados de otro padrón al de Ilo, con jurisdicción y motivo.</p>
+      <span class="etiqueta pendiente">Próximamente</span>
+    </a>
+  </div>
+</div>
+
+</body>
+</html>

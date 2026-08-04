@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bajas y Altas - Padrón Nominal Ilo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://alcdn.msauth.net/browser/2.35.0/js/msal-browser.min.js"></script>
+<script src="https://unpkg.com/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<script src="common.js"></script>
+<style>
+  :root {
+    --primary: #1d5fbf; --primary-dark: #163f7a; --accent: #2f6fdb;
+    --bg: #f4f6f9; --card: #ffffff; --border: #dbe2ea; --text: #1f2937; --muted: #6b7280;
+    --danger: #c0392b; --warning: #b8860b; --ok: #157347; --purple: #6b3fa0;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif; background: var(--bg); color: var(--text); }
+  header { background: var(--primary); color: white; padding: 14px 24px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }
+  header h1 { font-size: 17px; margin: 0; font-weight: 600; }
+  header .sub { font-size: 12px; opacity: 0.85; margin-top: 2px; }
+  nav.secciones { background: var(--primary-dark); padding: 0 24px; display: flex; gap: 4px; overflow-x: auto; }
+  nav.secciones a { color: rgba(255,255,255,0.75); text-decoration: none; font-size: 13px; font-weight: 600; padding: 10px 14px; white-space: nowrap; border-bottom: 3px solid transparent; }
+  nav.secciones a.actual { color: white; border-bottom-color: white; }
+  nav.secciones a.proximamente { color: rgba(255,255,255,0.4); cursor: default; }
+  .btn { border: none; padding: 9px 16px; border-radius: 6px; font-size: 14px; cursor: pointer; font-weight: 600; }
+  .btn-primary-inv { background: white; color: var(--primary); }
+  .btn-outline-inv { background: transparent; color: white; border: 1px solid rgba(255,255,255,0.6); }
+  .container { max-width: 980px; margin: 0 auto; padding: 20px 16px 60px; }
+  .login-screen { text-align: center; padding: 80px 20px; }
+  .login-screen h2 { color: var(--primary-dark); }
+  .login-screen p { color: var(--muted); max-width: 420px; margin: 8px auto 24px; }
+  .tabs { display: flex; gap: 4px; margin-bottom: 14px; border-bottom: 2px solid var(--border); flex-wrap: wrap; }
+  .tab { padding: 10px 18px; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -2px; }
+  .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+  .panel { display: none; } .panel.active { display: block; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+  label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  input[type=text], input[type=date], select, textarea {
+    width: 100%; padding: 9px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; margin-bottom: 14px; font-family: inherit; background: white;
+  }
+  input[readonly] { background: #f0f4f2; color: var(--primary-dark); font-weight: 600; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+  @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-outline { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
+  .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); }
+  th { background: #f0f4f2; font-weight: 600; color: var(--primary-dark); }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+  .badge-pendiente { background: #fdf3d8; color: var(--warning); }
+  .badge-confirmada { background: #dcf3e7; color: var(--ok); }
+  .empty { text-align: center; color: var(--muted); padding: 30px; font-size: 13px; }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #ccc; border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .aviso-ok { font-size: 12px; color: var(--ok); margin: -8px 0 12px; }
+  .aviso-info { font-size: 12px; color: var(--muted); margin: -4px 0 12px; }
+  .toolbar { text-align: right; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Bajas y Altas — Padrón Nominal</h1>
+    <div class="sub" id="userInfo">No conectado</div>
+  </div>
+  <div>
+    <button class="btn btn-primary-inv" id="loginBtn" onclick="login()">Iniciar sesión</button>
+    <button class="btn btn-outline-inv" id="logoutBtn" onclick="logout()" style="display:none">Cerrar sesión</button>
+  </div>
+</header>
+
+<nav class="secciones">
+  <a href="index.html">Inicio</a>
+  <a href="transito.html">Tránsito</a>
+  <a href="bajas-altas.html" class="actual">Bajas y Altas</a>
+  <a class="proximamente">Recibidos (próximamente)</a>
+  <a class="proximamente">Reubicados (próximamente)</a>
+</nav>
+
+<div class="container">
+
+  <div id="loginScreen" class="login-screen">
+    <h2>Solicitudes de baja y alta</h2>
+    <p>Inicia sesión con tu cuenta Microsoft 365 para registrar y consultar las solicitudes guardadas en tu OneDrive.</p>
+    <button class="btn btn-primary" style="background:var(--primary); color:white;" onclick="login()">Iniciar sesión con Microsoft</button>
+  </div>
+
+  <div id="appScreen" style="display:none">
+
+    <div class="tabs">
+      <div class="tab active" data-tab="baja" onclick="switchTab('baja')">Nueva baja</div>
+      <div class="tab" data-tab="alta" onclick="switchTab('alta')">Nueva alta</div>
+      <div class="tab" data-tab="verificar" onclick="switchTab('verificar')">Verificar estados</div>
+      <div class="tab" data-tab="registro" onclick="switchTab('registro')">Registro</div>
+    </div>
+
+    <div class="panel active" id="panel-baja">
+      <div class="card">
+        <label>Fecha del padrón a consultar</label>
+        <input type="date" id="baja-fecha">
+        <label>Documento del niño (DNI / CUI / CNV)</label>
+        <div style="display:flex; gap:8px; margin-bottom:4px;">
+          <input type="text" id="baja-documento" placeholder="Ej. 94731216" style="margin-bottom:0;">
+          <button class="btn btn-primary" onclick="buscarParaBaja()" style="white-space:nowrap;">Buscar</button>
+        </div>
+        <div id="baja-aviso"></div>
+        <div id="baja-resultado" style="display:none; margin-top:14px;">
+          <div style="background:#f7faf9; border-radius:8px; padding:12px 14px; margin-bottom:14px;">
+            <table>
+              <tr><td style="color:var(--muted); width:40%;">Nombre</td><td id="b-nombre" style="text-align:right;"></td></tr>
+              <tr><td style="color:var(--muted);">Nacimiento / edad</td><td id="b-edad" style="text-align:right;"></td></tr>
+              <tr><td style="color:var(--muted);">Dirección</td><td id="b-direccion" style="text-align:right;"></td></tr>
+              <tr><td style="color:var(--muted);">Seguro / EE.SS.</td><td id="b-seguro" style="text-align:right;"></td></tr>
+              <tr><td style="color:var(--muted);">Madre</td><td id="b-madre" style="text-align:right;"></td></tr>
+              <tr><td style="color:var(--muted);">Padre / jefe de familia</td><td id="b-padre" style="text-align:right;"></td></tr>
+            </table>
+          </div>
+          <label>Jurisdicción</label>
+          <select id="baja-jurisdiccion">
+            <option>C.S. Pampa Inalámbrica</option><option>P.S. Los Ángeles</option><option>P.S. Jhon F. Kennedy</option>
+            <option>P.S. Varadero</option><option>P.S. 18 de Mayo</option><option>C.S. Alto Ilo</option><option>C.S. Miramar</option>
+          </select>
+          <label>Responsable que solicita</label>
+          <input type="text" id="baja-responsable" placeholder="Lic. nombre completo">
+          <label>Motivo</label>
+          <textarea id="baja-motivo" rows="2" placeholder="Ej. madre indica viaje definitivo a Lima"></textarea>
+          <button class="btn btn-primary" onclick="registrarBaja()">Registrar solicitud de baja</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-alta">
+      <div class="card">
+        <p class="aviso-info">El niño aún no está en el padrón. Si el documento ya está en tu registro de bajas, el nombre se completa solo.</p>
+        <label>Documento</label>
+        <div style="display:flex; gap:8px; margin-bottom:4px;">
+          <input type="text" id="alta-documento" placeholder="Ej. 94731216" style="margin-bottom:0;">
+          <button class="btn btn-outline" onclick="buscarParaAlta()" style="white-space:nowrap;">Buscar en bajas</button>
+        </div>
+        <div id="alta-aviso"></div>
+        <label style="margin-top:10px;">Nombre</label>
+        <input type="text" id="alta-nombre" placeholder="Se completa solo, o escríbelo si no aparece">
+        <label>Responsable que solicita</label>
+        <input type="text" id="alta-responsable" placeholder="Lic. nombre completo">
+        <label>Motivo</label>
+        <textarea id="alta-motivo" rows="2" placeholder="Ej. regresó de Lima, madre solicita reactivación"></textarea>
+        <button class="btn btn-primary" onclick="registrarAlta()">Registrar solicitud de alta</button>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-verificar">
+      <div class="card">
+        <p class="aviso-info">Revisa las solicitudes PENDIENTES contra el padrón de una fecha. Si un niño de "baja" ya no aparece en ninguno de los 3 archivos, se confirma su baja. Si un niño de "alta" ya reapareció, se confirma su alta.</p>
+        <label>Fecha del padrón a verificar</label>
+        <input type="date" id="verificar-fecha">
+        <button class="btn btn-primary" onclick="verificarEstados()">Verificar</button>
+        <div id="verificar-resultado" style="margin-top:16px;"></div>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-registro">
+      <div class="toolbar">
+        <button class="btn btn-outline" onclick="descargarExcel()">Descargar Excel (2 hojas)</button>
+      </div>
+      <h3 style="font-size:14px; color:var(--danger); margin-bottom:8px;">Bajas</h3>
+      <div class="card" id="tabla-bajas" style="padding:0; overflow:hidden;"></div>
+      <h3 style="font-size:14px; color:var(--ok); margin:20px 0 8px;">Altas</h3>
+      <div class="card" id="tabla-altas" style="padding:0; overflow:hidden;"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const INDICE_PATH = `${CARPETA_BAJAS_ALTAS}/indice_bajas_altas.json`;
+let indice = { bajas: [], altas: [] };
+
+window.addEventListener("load", async () => {
+  const yaConectado = await inicializarLogin();
+  if (yaConectado) await onSignedIn();
+});
+
+async function onSignedIn() {
+  document.getElementById("loginScreen").style.display = "none";
+  document.getElementById("appScreen").style.display = "block";
+  document.getElementById("loginBtn").style.display = "none";
+  document.getElementById("logoutBtn").style.display = "inline-block";
+  document.getElementById("userInfo").innerText = "Conectado como: " + (account ? account.username : "");
+  const hoy = fechaHoyPeru().toISOString().slice(0, 10);
+  document.getElementById("baja-fecha").value = hoy;
+  document.getElementById("verificar-fecha").value = hoy;
+  await cargarIndice();
+  renderTablas();
+}
+
+async function cargarIndice() {
+  try {
+    const data = await graphGet(INDICE_PATH);
+    indice = data || { bajas: [], altas: [] };
+  } catch (e) {
+    console.error(e);
+    indice = { bajas: [], altas: [] };
+  }
+}
+async function guardarIndice() {
+  await graphPutJson(INDICE_PATH, indice);
+}
+
+function switchTab(tab) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === tab));
+  document.querySelectorAll(".panel").forEach(p => p.classList.toggle("active", p.id === "panel-" + tab));
+  if (tab === "registro") renderTablas();
+}
+
+let ultimoResultadoBaja = null;
+
+async function buscarParaBaja() {
+  const fecha = document.getElementById("baja-fecha").value;
+  const documento = document.getElementById("baja-documento").value.trim();
+  const aviso = document.getElementById("baja-aviso");
+  const resultado = document.getElementById("baja-resultado");
+  if (!fecha || !documento) { alert("Ingresa la fecha y el documento."); return; }
+  aviso.innerHTML = `<div class="aviso-info"><span class="spinner"></span>Buscando en el padrón del ${fecha}...</div>`;
+  resultado.style.display = "none";
+  try {
+    const encontrado = await buscarEnPadronDelDia(fecha, documento);
+    if (!encontrado) {
+      aviso.innerHTML = `<div class="aviso-info" style="color:var(--danger)">No se encontró ese documento en el padrón del ${fecha}.</div>`;
+      return;
+    }
+    aviso.innerHTML = "";
+    ultimoResultadoBaja = encontrado.datos;
+    const d = encontrado.datos;
+    const nombreCompleto = `${d.apellidoPaterno} ${d.apellidoMaterno}, ${d.nombres}`.trim();
+    const direccion = [d.ejeVial, d.descripcionDireccion].filter(Boolean).join(" ") || "—";
+    document.getElementById("b-nombre").textContent = nombreCompleto;
+    document.getElementById("b-edad").textContent = (d.fechaNacimiento || "—") + " · " + (d.edad || "—");
+    document.getElementById("b-direccion").textContent = direccion;
+    document.getElementById("b-seguro").textContent = (d.tipoSeguro || "—") + " · " + (d.eessAdscripcion || "—");
+    document.getElementById("b-madre").textContent = `${d.apellidoPaternoMadre || ""} ${d.apellidoMaternoMadre || ""}, ${d.nombresMadre || ""}`.trim(", ") || "—";
+    const esPadre = normalizarTexto(d.vinculoJefe || "") === "PADRE" || normalizarTexto(d.vinculoJefe) === "2";
+    document.getElementById("b-padre").textContent = esPadre
+      ? `${d.apellidoPaternoJefe || ""} ${d.apellidoMaternoJefe || ""}, ${d.nombresJefe || ""}`.trim(", ")
+      : `No registrado (jefe de familia: ${d.vinculoJefe || "sin dato"})`;
+    resultado.style.display = "block";
+  } catch (e) {
+    aviso.innerHTML = `<div class="aviso-info" style="color:var(--danger)">Error: ${e.message}</div>`;
+    console.error(e);
+  }
+}
+
+async function registrarBaja() {
+  if (!ultimoResultadoBaja) return;
+  const d = ultimoResultadoBaja;
+  const responsable = document.getElementById("baja-responsable").value.trim();
+  const motivo = document.getElementById("baja-motivo").value.trim();
+  if (!responsable || !motivo) { alert("Completa responsable y motivo."); return; }
+  const nombreCompleto = `${d.apellidoPaterno} ${d.apellidoMaterno}, ${d.nombres}`.trim();
+  await cargarIndice();
+  indice.bajas.push({
+    id: crypto.randomUUID(),
+    codigoPadron: d.codigoPadron, documento: document.getElementById("baja-documento").value.trim(),
+    nombre: nombreCompleto, fechaNacimiento: d.fechaNacimiento, edadAlSolicitar: d.edad,
+    direccion: [d.ejeVial, d.descripcionDireccion].filter(Boolean).join(" "),
+    referencia: d.referenciaDireccion, tipoSeguro: d.tipoSeguro, eessAdscripcion: d.eessAdscripcion,
+    jurisdiccion: document.getElementById("baja-jurisdiccion").value,
+    dniMadre: d.dniMadre, nombreMadre: `${d.apellidoPaternoMadre || ""} ${d.apellidoMaternoMadre || ""}, ${d.nombresMadre || ""}`.trim(", "),
+    celularMadre: d.celularMadre, correoMadre: d.correoMadre,
+    vinculoJefe: d.vinculoJefe, dniJefe: d.dniJefe,
+    nombreJefe: `${d.apellidoPaternoJefe || ""} ${d.apellidoMaternoJefe || ""}, ${d.nombresJefe || ""}`.trim(", "),
+    responsable, motivo, fechaSolicitud: fechaHoyPeru().toISOString().slice(0, 10),
+    estado: "PENDIENTE", fechaBaja: null, edadAlDarDeBaja: null,
+  });
+  await guardarIndice();
+  alert("Solicitud de baja registrada.");
+  document.getElementById("baja-resultado").style.display = "none";
+  document.getElementById("baja-documento").value = "";
+  document.getElementById("baja-responsable").value = "";
+  document.getElementById("baja-motivo").value = "";
+  ultimoResultadoBaja = null;
+}
+
+async function buscarParaAlta() {
+  const documento = document.getElementById("alta-documento").value.trim();
+  const aviso = document.getElementById("alta-aviso");
+  if (!documento) return;
+  await cargarIndice();
+  const encontrada = indice.bajas.find(b => b.documento === documento);
+  if (encontrada) {
+    document.getElementById("alta-nombre").value = encontrada.nombre;
+    aviso.innerHTML = `<div class="aviso-ok">Encontrado en tu registro de bajas — nombre completado solo.</div>`;
+  } else {
+    aviso.innerHTML = `<div class="aviso-info">No está en tu registro de bajas — escribe el nombre a mano.</div>`;
+  }
+}
+
+async function registrarAlta() {
+  const documento = document.getElementById("alta-documento").value.trim();
+  const nombre = document.getElementById("alta-nombre").value.trim();
+  const responsable = document.getElementById("alta-responsable").value.trim();
+  const motivo = document.getElementById("alta-motivo").value.trim();
+  if (!documento || !nombre || !responsable || !motivo) { alert("Completa todos los campos."); return; }
+  await cargarIndice();
+  indice.altas.push({
+    id: crypto.randomUUID(), documento, nombre, responsable, motivo,
+    fechaSolicitud: fechaHoyPeru().toISOString().slice(0, 10),
+    estado: "PENDIENTE", codigoPadronAlReaparecer: null, fechaAlta: null,
+  });
+  await guardarIndice();
+  alert("Solicitud de alta registrada.");
+  document.getElementById("alta-documento").value = "";
+  document.getElementById("alta-nombre").value = "";
+  document.getElementById("alta-responsable").value = "";
+  document.getElementById("alta-motivo").value = "";
+  document.getElementById("alta-aviso").innerHTML = "";
+}
+
+async function verificarEstados() {
+  const fecha = document.getElementById("verificar-fecha").value;
+  const div = document.getElementById("verificar-resultado");
+  if (!fecha) { alert("Selecciona una fecha."); return; }
+  div.innerHTML = `<div class="empty"><span class="spinner"></span>Leyendo los 3 Excels del ${fecha}...</div>`;
+  const { encontrados, leidos, faltantes } = await codigosDelDia(fecha);
+  if (leidos.length === 0) {
+    div.innerHTML = `<div class="empty">No se pudo leer ningún archivo del ${fecha}.</div>`;
+    return;
+  }
+  await cargarIndice();
+  let nBajas = 0, nAltas = 0;
+  const ref = new Date(fecha + "T00:00:00");
+
+  indice.bajas.forEach(b => {
+    if (b.estado === "PENDIENTE" && b.codigoPadron && !encontrados.has(String(b.codigoPadron).trim())) {
+      b.estado = "CONFIRMADA"; b.fechaBaja = fecha;
+      b.edadAlDarDeBaja = b.fechaNacimiento ? calcularEdad(convertirFechaISO(b.fechaNacimiento), ref) : "—";
+      nBajas++;
+    }
+  });
+  indice.altas.forEach(a => {
+    if (a.estado === "PENDIENTE" && encontrados.has(String(a.documento).trim())) {
+      a.estado = "CONFIRMADA"; a.fechaAlta = fecha;
+      nAltas++;
+    }
+  });
+  await guardarIndice();
+
+  const avisoFaltantes = faltantes.length ? `<div class="aviso-info">No se pudieron leer: ${faltantes.join(", ")}.</div>` : "";
+  div.innerHTML = avisoFaltantes + `<div class="aviso-ok">Bajas confirmadas: ${nBajas} · Altas confirmadas: ${nAltas}. Ve a la pestaña Registro para verlas.</div>`;
+}
+
+function convertirFechaISO(fechaTexto) {
+  if (/^\d{4}-\d{2}-\d{2}/.test(fechaTexto)) return fechaTexto;
+  const [d, m, y] = fechaTexto.split("/");
+  return `${y}-${m}-${d}`;
+}
+
+function badge(estado) {
+  const cls = estado === "CONFIRMADA" ? "badge-confirmada" : "badge-pendiente";
+  return `<span class="badge ${cls}">${estado}</span>`;
+}
+function renderTablas() {
+  const bajasDiv = document.getElementById("tabla-bajas");
+  const altasDiv = document.getElementById("tabla-altas");
+  bajasDiv.innerHTML = !indice.bajas.length
+    ? `<div class="empty">Sin bajas registradas.</div>`
+    : `<table><tr><th>Código</th><th>Nombre</th><th>Solicitada</th><th>Estado</th><th>Fecha de baja</th></tr>${
+        indice.bajas.map(b => `<tr><td>${b.codigoPadron}</td><td>${b.nombre}</td><td>${b.fechaSolicitud}</td><td>${badge(b.estado)}</td><td>${b.fechaBaja || "—"}</td></tr>`).join("")
+      }</table>`;
+  altasDiv.innerHTML = !indice.altas.length
+    ? `<div class="empty">Sin altas registradas.</div>`
+    : `<table><tr><th>Documento</th><th>Nombre</th><th>Solicitada</th><th>Estado</th><th>Fecha de alta</th></tr>${
+        indice.altas.map(a => `<tr><td>${a.documento}</td><td>${a.nombre}</td><td>${a.fechaSolicitud}</td><td>${badge(a.estado)}</td><td>${a.fechaAlta || "—"}</td></tr>`).join("")
+      }</table>`;
+}
+
+function descargarExcel() {
+  const wb = XLSX.utils.book_new();
+  const cabB = ["Código Padrón","Documento","Nombre","Fecha nacimiento","Edad al solicitar","Dirección","Referencia","Tipo seguro","EE.SS. adscripción","Jurisdicción","DNI madre","Nombre madre","Celular madre","Correo madre","Vínculo jefe familia","DNI jefe familia","Nombre jefe familia","Responsable","Motivo","Fecha solicitud","Estado","Fecha de baja","Edad al dar de baja"];
+  const filasB = indice.bajas.map(b => [b.codigoPadron,b.documento,b.nombre,b.fechaNacimiento,b.edadAlSolicitar,b.direccion,b.referencia,b.tipoSeguro,b.eessAdscripcion,b.jurisdiccion,b.dniMadre,b.nombreMadre,b.celularMadre,b.correoMadre,b.vinculoJefe,b.dniJefe,b.nombreJefe,b.responsable,b.motivo,b.fechaSolicitud,b.estado,b.fechaBaja,b.edadAlDarDeBaja]);
+  const wsB = XLSX.utils.aoa_to_sheet([cabB, ...filasB]);
+  XLSX.utils.book_append_sheet(wb, wsB, "BAJAS");
+
+  const cabA = ["Documento","Nombre","Responsable","Motivo","Fecha solicitud","Estado","Código Padrón al reaparecer","Fecha de alta"];
+  const filasA = indice.altas.map(a => [a.documento,a.nombre,a.responsable,a.motivo,a.fechaSolicitud,a.estado,a.codigoPadronAlReaparecer,a.fechaAlta]);
+  const wsA = XLSX.utils.aoa_to_sheet([cabA, ...filasA]);
+  XLSX.utils.book_append_sheet(wb, wsA, "ALTAS");
+
+  XLSX.writeFile(wb, `Bajas_Altas_${fechaHoyPeru().toISOString().slice(0,10)}.xlsx`);
+}
+</script>
+</body>
+</html>
